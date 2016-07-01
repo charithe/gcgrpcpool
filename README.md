@@ -1,7 +1,7 @@
 GRPC pool for groupcache
 ========================
 
-A replacement for (groupcache)[https://github.com/golang/groupcache] `HTTPPool` that uses GRPC to communicate with peers. 
+A replacement for [groupcache](https://github.com/golang/groupcache) `HTTPPool` that uses GRPC to communicate with peers. 
 
 
 Usage
