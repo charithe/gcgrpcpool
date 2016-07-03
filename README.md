@@ -28,3 +28,9 @@ server.Serve(lis)
 ```
 
 Use `GRPCPoolOptions` to set the GRPC client dial options such as using compression, authentication etc. 
+
+To Do
+-----
+
+- Use GRPC `Balancer` to manage the peer connections
+- Peer discovery mechanism for Kubernetes

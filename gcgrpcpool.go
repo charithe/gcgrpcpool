@@ -17,6 +17,7 @@ package gcgrpcpool
 
 import (
 	"fmt"
+	"log"
 	"sync"
 
 	"github.com/charithe/gcgrpcpool/gcgrpc"
@@ -38,9 +39,9 @@ type GRPCPool struct {
 }
 
 type GRPCPoolOptions struct {
-	Replicas       int
-	HashFn         consistenthash.Hash
-	PeerDialOption grpc.DialOption
+	Replicas        int
+	HashFn          consistenthash.Hash
+	PeerDialOptions []grpc.DialOption
 }
 
 func NewGRPCPool(self string, server *grpc.Server) *GRPCPool {
@@ -69,8 +70,8 @@ func NewGRPCPoolOptions(self string, server *grpc.Server, opts *GRPCPoolOptions)
 		pool.opts.Replicas = defaultReplicas
 	}
 
-	if pool.opts.PeerDialOption == nil {
-		pool.opts.PeerDialOption = grpc.WithInsecure()
+	if pool.opts.PeerDialOptions == nil {
+		pool.opts.PeerDialOptions = []grpc.DialOption{grpc.WithInsecure()}
 	}
 
 	pool.peers = consistenthash.New(pool.opts.Replicas, pool.opts.HashFn)
@@ -82,12 +83,28 @@ func NewGRPCPoolOptions(self string, server *grpc.Server, opts *GRPCPoolOptions)
 func (gp *GRPCPool) Set(peers ...string) {
 	gp.mu.Lock()
 	defer gp.mu.Unlock()
+	tempGetters := make(map[string]*grpcGetter, len(peers))
+	for _, peer := range peers {
+		if getter, exists := gp.grpcGetters[peer]; exists == true {
+			tempGetters[peer] = getter
+			delete(gp.grpcGetters, peer)
+		} else {
+			getter, err := newGRPCGetter(peer, gp.opts.PeerDialOptions...)
+			if err != nil {
+				log.Fatalf("Failed to open connection to [%s] : %v", peer, err)
+			}
+			tempGetters[peer] = getter
+		}
+	}
+
+	for p, g := range gp.grpcGetters {
+		g.close()
+		delete(gp.grpcGetters, p)
+	}
+
 	gp.peers = consistenthash.New(gp.opts.Replicas, gp.opts.HashFn)
 	gp.peers.Add(peers...)
-	gp.grpcGetters = make(map[string]*grpcGetter, len(peers))
-	for _, peer := range peers {
-		gp.grpcGetters[peer] = &grpcGetter{address: peer, dialOpt: gp.opts.PeerDialOption}
-	}
+	gp.grpcGetters = tempGetters
 }
 
 func (gp *GRPCPool) PickPeer(key string) (groupcache.ProtoGetter, bool) {
@@ -121,17 +138,19 @@ func (gp *GRPCPool) Retrieve(ctx context.Context, req *gcgrpc.RetrieveRequest) (
 
 type grpcGetter struct {
 	address string
-	dialOpt grpc.DialOption
+	conn    *grpc.ClientConn
+}
+
+func newGRPCGetter(address string, dialOpts ...grpc.DialOption) (*grpcGetter, error) {
+	conn, err := grpc.Dial(address, dialOpts...)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to connect to [%s]: %v", address, err)
+	}
+	return &grpcGetter{address: address, conn: conn}, nil
 }
 
 func (g *grpcGetter) Get(ctx groupcache.Context, in *pb.GetRequest, out *pb.GetResponse) error {
-	conn, err := grpc.Dial(g.address, g.dialOpt)
-	if err != nil {
-		return fmt.Errorf("Failed to connect to [%s]: %v", g.address, err)
-	}
-	defer conn.Close()
-	client := gcgrpc.NewPeerClient(conn)
-
+	client := gcgrpc.NewPeerClient(g.conn)
 	resp, err := client.Retrieve(context.Background(), &gcgrpc.RetrieveRequest{Group: *in.Group, Key: *in.Key})
 	if err != nil {
 		return fmt.Errorf("Failed to GET [%s]: %v", in, err)
@@ -139,4 +158,10 @@ func (g *grpcGetter) Get(ctx groupcache.Context, in *pb.GetRequest, out *pb.GetR
 
 	out.Value = resp.Value
 	return nil
+}
+
+func (g *grpcGetter) close() {
+	if g.conn != nil {
+		g.conn.Close()
+	}
 }
