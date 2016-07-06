@@ -17,8 +17,9 @@ package gcgrpcpool
 
 import (
 	"fmt"
-	"log"
 	"sync"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/charithe/gcgrpcpool/gcgrpc"
 	"github.com/golang/groupcache"
@@ -83,6 +84,7 @@ func NewGRPCPoolOptions(self string, server *grpc.Server, opts *GRPCPoolOptions)
 func (gp *GRPCPool) Set(peers ...string) {
 	gp.mu.Lock()
 	defer gp.mu.Unlock()
+	gp.peers = consistenthash.New(gp.opts.Replicas, gp.opts.HashFn)
 	tempGetters := make(map[string]*grpcGetter, len(peers))
 	for _, peer := range peers {
 		if getter, exists := gp.grpcGetters[peer]; exists == true {
@@ -91,9 +93,11 @@ func (gp *GRPCPool) Set(peers ...string) {
 		} else {
 			getter, err := newGRPCGetter(peer, gp.opts.PeerDialOptions...)
 			if err != nil {
-				log.Fatalf("Failed to open connection to [%s] : %v", peer, err)
+				log.Warnf("Failed to open connection to [%s] : %v", peer, err)
+			} else {
+				tempGetters[peer] = getter
+				gp.peers.Add(peer)
 			}
-			tempGetters[peer] = getter
 		}
 	}
 
@@ -102,8 +106,6 @@ func (gp *GRPCPool) Set(peers ...string) {
 		delete(gp.grpcGetters, p)
 	}
 
-	gp.peers = consistenthash.New(gp.opts.Replicas, gp.opts.HashFn)
-	gp.peers.Add(peers...)
 	gp.grpcGetters = tempGetters
 }
 
@@ -134,6 +136,31 @@ func (gp *GRPCPool) Retrieve(ctx context.Context, req *gcgrpc.RetrieveRequest) (
 	}
 
 	return &gcgrpc.RetrieveResponse{Value: value}, nil
+}
+
+func (gp *GRPCPool) AddPeers(ctx context.Context, peers *gcgrpc.Peers) (*gcgrpc.Ack, error) {
+	gp.mu.Lock()
+	defer gp.mu.Unlock()
+	for _, peer := range peers.PeerAddr {
+		if _, exists := gp.grpcGetters[peer]; exists != true {
+			getter, err := newGRPCGetter(peer, gp.opts.PeerDialOptions...)
+			if err != nil {
+				log.Warnf("Failed to open connection to [%s]: %v", peer, err)
+			} else {
+				log.Infof("Adding peer [%s]", peer)
+				gp.grpcGetters[peer] = getter
+				gp.peers.Add(peer)
+			}
+		}
+	}
+	return &gcgrpc.Ack{}, nil
+
+}
+func (gp *GRPCPool) RemovePeers(ctx context.Context, peers *gcgrpc.Peers) (*gcgrpc.Ack, error) {
+	return &gcgrpc.Ack{}, nil
+}
+func (gp *GRPCPool) SetPeers(ctx context.Context, peers *gcgrpc.Peers) (*gcgrpc.Ack, error) {
+	return &gcgrpc.Ack{}, nil
 }
 
 type grpcGetter struct {

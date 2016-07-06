@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-syntax = "proto3";
 
+syntax = "proto3";
 package gcgrpc;
 
 message RetrieveRequest {
@@ -26,6 +26,15 @@ message RetrieveResponse {
   bytes value = 1;
 }
 
+message Peers {
+    repeated string peerAddr = 1;
+}
+
+message Ack {}
+
 service Peer {
   rpc Retrieve(RetrieveRequest) returns (RetrieveResponse) {}
+  rpc AddPeers(Peers) returns (Ack) {}
+  rpc RemovePeers(Peers) returns (Ack) {}
+  rpc SetPeers(Peers) returns (Ack) {}
 }

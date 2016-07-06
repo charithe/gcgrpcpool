@@ -11,6 +11,8 @@ It is generated from these files:
 It has these top-level messages:
 	RetrieveRequest
 	RetrieveResponse
+	Peers
+	Ack
 */
 package gcgrpc
 
@@ -53,9 +55,28 @@ func (m *RetrieveResponse) String() string            { return proto.CompactText
 func (*RetrieveResponse) ProtoMessage()               {}
 func (*RetrieveResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
 
+type Peers struct {
+	PeerAddr []string `protobuf:"bytes,1,rep,name=peerAddr" json:"peerAddr,omitempty"`
+}
+
+func (m *Peers) Reset()                    { *m = Peers{} }
+func (m *Peers) String() string            { return proto.CompactTextString(m) }
+func (*Peers) ProtoMessage()               {}
+func (*Peers) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+
+type Ack struct {
+}
+
+func (m *Ack) Reset()                    { *m = Ack{} }
+func (m *Ack) String() string            { return proto.CompactTextString(m) }
+func (*Ack) ProtoMessage()               {}
+func (*Ack) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+
 func init() {
 	proto.RegisterType((*RetrieveRequest)(nil), "gcgrpc.RetrieveRequest")
 	proto.RegisterType((*RetrieveResponse)(nil), "gcgrpc.RetrieveResponse")
+	proto.RegisterType((*Peers)(nil), "gcgrpc.Peers")
+	proto.RegisterType((*Ack)(nil), "gcgrpc.Ack")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -70,6 +91,9 @@ const _ = grpc.SupportPackageIsVersion3
 
 type PeerClient interface {
 	Retrieve(ctx context.Context, in *RetrieveRequest, opts ...grpc.CallOption) (*RetrieveResponse, error)
+	AddPeers(ctx context.Context, in *Peers, opts ...grpc.CallOption) (*Ack, error)
+	RemovePeers(ctx context.Context, in *Peers, opts ...grpc.CallOption) (*Ack, error)
+	SetPeers(ctx context.Context, in *Peers, opts ...grpc.CallOption) (*Ack, error)
 }
 
 type peerClient struct {
@@ -89,10 +113,40 @@ func (c *peerClient) Retrieve(ctx context.Context, in *RetrieveRequest, opts ...
 	return out, nil
 }
 
+func (c *peerClient) AddPeers(ctx context.Context, in *Peers, opts ...grpc.CallOption) (*Ack, error) {
+	out := new(Ack)
+	err := grpc.Invoke(ctx, "/gcgrpc.Peer/AddPeers", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *peerClient) RemovePeers(ctx context.Context, in *Peers, opts ...grpc.CallOption) (*Ack, error) {
+	out := new(Ack)
+	err := grpc.Invoke(ctx, "/gcgrpc.Peer/RemovePeers", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *peerClient) SetPeers(ctx context.Context, in *Peers, opts ...grpc.CallOption) (*Ack, error) {
+	out := new(Ack)
+	err := grpc.Invoke(ctx, "/gcgrpc.Peer/SetPeers", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Server API for Peer service
 
 type PeerServer interface {
 	Retrieve(context.Context, *RetrieveRequest) (*RetrieveResponse, error)
+	AddPeers(context.Context, *Peers) (*Ack, error)
+	RemovePeers(context.Context, *Peers) (*Ack, error)
+	SetPeers(context.Context, *Peers) (*Ack, error)
 }
 
 func RegisterPeerServer(s *grpc.Server, srv PeerServer) {
@@ -117,6 +171,60 @@ func _Peer_Retrieve_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Peer_AddPeers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Peers)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PeerServer).AddPeers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/gcgrpc.Peer/AddPeers",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PeerServer).AddPeers(ctx, req.(*Peers))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Peer_RemovePeers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Peers)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PeerServer).RemovePeers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/gcgrpc.Peer/RemovePeers",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PeerServer).RemovePeers(ctx, req.(*Peers))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Peer_SetPeers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Peers)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PeerServer).SetPeers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/gcgrpc.Peer/SetPeers",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PeerServer).SetPeers(ctx, req.(*Peers))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Peer_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "gcgrpc.Peer",
 	HandlerType: (*PeerServer)(nil),
@@ -124,6 +232,18 @@ var _Peer_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Retrieve",
 			Handler:    _Peer_Retrieve_Handler,
+		},
+		{
+			MethodName: "AddPeers",
+			Handler:    _Peer_AddPeers_Handler,
+		},
+		{
+			MethodName: "RemovePeers",
+			Handler:    _Peer_RemovePeers_Handler,
+		},
+		{
+			MethodName: "SetPeers",
+			Handler:    _Peer_SetPeers_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -133,15 +253,19 @@ var _Peer_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("gcgrpc.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 151 bytes of a gzipped FileDescriptorProto
+	// 224 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xe2, 0xe2, 0x49, 0x4f, 0x4e, 0x2f,
 	0x2a, 0x48, 0xd6, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x83, 0xf0, 0x94, 0x2c, 0xb9, 0xf8,
 	0x83, 0x52, 0x4b, 0x8a, 0x32, 0x53, 0xcb, 0x52, 0x83, 0x52, 0x0b, 0x4b, 0x53, 0x8b, 0x4b, 0x84,
 	0x44, 0xb8, 0x58, 0xd3, 0x8b, 0xf2, 0x4b, 0x0b, 0x24, 0x18, 0x15, 0x18, 0x35, 0x38, 0x83, 0x20,
 	0x1c, 0x21, 0x01, 0x2e, 0xe6, 0xec, 0xd4, 0x4a, 0x09, 0x26, 0xb0, 0x18, 0x88, 0xa9, 0xa4, 0xc1,
 	0x25, 0x80, 0xd0, 0x5a, 0x5c, 0x90, 0x9f, 0x57, 0x9c, 0x0a, 0xd2, 0x5b, 0x96, 0x98, 0x53, 0x9a,
-	0x0a, 0xd6, 0xcb, 0x13, 0x04, 0xe1, 0x18, 0xb9, 0x73, 0xb1, 0x04, 0xa4, 0xa6, 0x16, 0x09, 0xd9,
-	0x73, 0x71, 0xc0, 0x74, 0x08, 0x89, 0xeb, 0x41, 0xdd, 0x83, 0x66, 0xbd, 0x94, 0x04, 0xa6, 0x04,
-	0xc4, 0x70, 0x25, 0x86, 0x24, 0x36, 0xb0, 0xe3, 0x8d, 0x01, 0x01, 0x00, 0x00, 0xff, 0xff, 0xbd,
-	0x33, 0xf5, 0xbd, 0xcc, 0x00, 0x00, 0x00,
+	0x0a, 0xd6, 0xcb, 0x13, 0x04, 0xe1, 0x28, 0x29, 0x73, 0xb1, 0x06, 0xa4, 0xa6, 0x16, 0x15, 0x0b,
+	0x49, 0x71, 0x71, 0x14, 0x00, 0x19, 0x8e, 0x29, 0x29, 0x45, 0x40, 0x15, 0xcc, 0x40, 0x93, 0xe0,
+	0x7c, 0x25, 0x56, 0x2e, 0x66, 0xc7, 0xe4, 0x6c, 0xa3, 0x13, 0x8c, 0x5c, 0x2c, 0x20, 0xc5, 0x42,
+	0xf6, 0x5c, 0x1c, 0x30, 0xe3, 0x85, 0xc4, 0xf5, 0xa0, 0x8e, 0x47, 0x73, 0xab, 0x94, 0x04, 0xa6,
+	0x04, 0xc4, 0x25, 0x4a, 0x0c, 0x42, 0x1a, 0x5c, 0x1c, 0x40, 0x83, 0x21, 0x16, 0xf3, 0xc2, 0xd4,
+	0x81, 0xb9, 0x52, 0xdc, 0x30, 0x2e, 0xd0, 0x46, 0xa0, 0x4a, 0x6d, 0x2e, 0xee, 0xa0, 0xd4, 0xdc,
+	0xfc, 0xb2, 0x54, 0x62, 0x14, 0x03, 0x8d, 0x0d, 0x4e, 0x2d, 0x21, 0x42, 0x65, 0x12, 0x1b, 0x38,
+	0xa8, 0x8d, 0x01, 0x01, 0x00, 0x00, 0xff, 0xff, 0xc8, 0x5b, 0x48, 0xe6, 0x7a, 0x01, 0x00, 0x00,
 }
