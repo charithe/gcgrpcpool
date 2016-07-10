@@ -93,7 +93,7 @@ func (gp *GRPCPool) Set(peers ...string) {
 		} else {
 			getter, err := newGRPCGetter(peer, gp.opts.PeerDialOptions...)
 			if err != nil {
-				log.Warnf("Failed to open connection to [%s] : %v", peer, err)
+				log.WithError(err).Warnf("Failed to open connection to [%s]", peer)
 			} else {
 				tempGetters[peer] = getter
 				gp.peers.Add(peer)
@@ -126,12 +126,14 @@ func (gp *GRPCPool) PickPeer(key string) (groupcache.ProtoGetter, bool) {
 func (gp *GRPCPool) Retrieve(ctx context.Context, req *gcgrpc.RetrieveRequest) (*gcgrpc.RetrieveResponse, error) {
 	group := groupcache.GetGroup(req.Group)
 	if group == nil {
+		log.Warnf("Unable to find group [%s]", req.Group)
 		return nil, fmt.Errorf("Unable to find group [%s]", req.Group)
 	}
 	group.Stats.ServerRequests.Add(1)
 	var value []byte
 	err := group.Get(ctx, req.Key, groupcache.AllocatingByteSliceSink(&value))
 	if err != nil {
+		log.WithError(err).Warnf("Failed to retrieve [%s]", req)
 		return nil, fmt.Errorf("Failed to retrieve [%s]: %v", req, err)
 	}
 
@@ -145,7 +147,7 @@ func (gp *GRPCPool) AddPeers(ctx context.Context, peers *gcgrpc.Peers) (*gcgrpc.
 		if _, exists := gp.grpcGetters[peer]; exists != true {
 			getter, err := newGRPCGetter(peer, gp.opts.PeerDialOptions...)
 			if err != nil {
-				log.Warnf("Failed to open connection to [%s]: %v", peer, err)
+				log.WithError(err).Warnf("Failed to open connection to [%s]", peer)
 			} else {
 				log.Infof("Adding peer [%s]", peer)
 				gp.grpcGetters[peer] = getter
@@ -156,10 +158,19 @@ func (gp *GRPCPool) AddPeers(ctx context.Context, peers *gcgrpc.Peers) (*gcgrpc.
 	return &gcgrpc.Ack{}, nil
 
 }
+
 func (gp *GRPCPool) RemovePeers(ctx context.Context, peers *gcgrpc.Peers) (*gcgrpc.Ack, error) {
+	gp.mu.Lock()
+	defer gp.mu.Unlock()
+	for _, peer := range peers.PeerAddr {
+		log.Infof("Removing peer [%s]", peer)
+		delete(gp.grpcGetters, peer)
+	}
 	return &gcgrpc.Ack{}, nil
 }
+
 func (gp *GRPCPool) SetPeers(ctx context.Context, peers *gcgrpc.Peers) (*gcgrpc.Ack, error) {
+	gp.Set(peers.PeerAddr...)
 	return &gcgrpc.Ack{}, nil
 }
 
