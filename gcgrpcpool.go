@@ -163,8 +163,11 @@ func (gp *GRPCPool) RemovePeers(ctx context.Context, peers *gcgrpc.Peers) (*gcgr
 	gp.mu.Lock()
 	defer gp.mu.Unlock()
 	for _, peer := range peers.PeerAddr {
-		log.Infof("Removing peer [%s]", peer)
-		delete(gp.grpcGetters, peer)
+		if p, exists := gp.grpcGetters[peer]; exists == true {
+			log.Infof("Removing peer [%s]", peer)
+			p.close()
+			delete(gp.grpcGetters, peer)
+		}
 	}
 	return &gcgrpc.Ack{}, nil
 }
