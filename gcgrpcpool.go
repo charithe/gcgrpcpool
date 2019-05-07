@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"sync"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/charithe/gcgrpcpool/gcgrpc"
 	"github.com/golang/groupcache"
@@ -89,6 +89,7 @@ func (gp *GRPCPool) Set(peers ...string) {
 	for _, peer := range peers {
 		if getter, exists := gp.grpcGetters[peer]; exists == true {
 			tempGetters[peer] = getter
+			gp.peers.Add(peer)
 			delete(gp.grpcGetters, peer)
 		} else {
 			getter, err := newGRPCGetter(peer, gp.opts.PeerDialOptions...)
